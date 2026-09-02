@@ -15,12 +15,15 @@
 - All analysis and figures created in R using tidyverse, ggpubr, and cowplot
 
 **Key Results: Coral Bleaching**
+
 Analysis of variance revealed a statistically significant difference in coral bleaching by level of sewage pollution (F(3, 2837) = 3.43, p = 0.016) and siltation (F(3, 2856) = 7.34, p < 0.001). Tukey’s post hoc tests revealed that coral reefs with medium sewage pollution had significantly more coral bleaching than reefs with low sewage pollution (p = 0.036). Reefs that always experienced siltation had significantly greater bleaching than reefs that experienced siltation often (p = 0.047), occasionally (p < 0.001), or never (p = 0.021). Error bars indicate standard error.  * indicates statistical significance at p < 0.05 and ** at p < 0.01.
 
 **Key Results: Coral Disease Incidence**
+
 Analysis of variance showed a significant difference in coral disease incidence by level of sewage (F(3, 781) = 4.64, p = 0.0032) and siltation (F(3, 802) = 19.96, p < 0.0001). Tukey’s post hoc tests showed that reefs with no sewage pollution had significantly less disease incidence than reefs with medium sewage (p = 0.0085) and high sewage (p = 0.044). Reefs with constant siltation had significantly higher levels of disease incidence than reefs that often had siltation (p = 0.0057), occasionally (p < 0.0001), and never (p < 0.0001). Error bars indicate standard error. * indicates statistical significance at p < 0.05 , ** at p < 0.01, and *** at p < 0.001.
 
 **Key Results: Distance to Population**
+
 Linear regression revealed no statistically significant relationship between distance to nearest population and coral bleaching (p = 0.717) or disease (p = 0.909).
 
 See coral_reef_analysis.html for full annotated code, output, and figures.
