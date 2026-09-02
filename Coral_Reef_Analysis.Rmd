@@ -1,0 +1,459 @@
+---
+title: "Coral_Reef_Analysis"
+author: "Annabelle Mauri"
+date: "2026-09-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+# load in libraries
+library(tidyverse)
+library(cowplot)
+library(pander)
+library(dplyr)
+library(ggpubr)
+```
+
+```{r}
+# read in data with read.csv()
+coral <- read.csv("coral_sparse.csv")
+```
+
+```{r}
+# cleaning data to facilitate analysis:
+
+# setting factor levels for all categorical variables of interest 
+# with factor() for characters and as.factor() for integers
+coral$sewage_pollution <- factor(coral$sewage_pollution, 
+                                 levels = c("None", "Low", "Medium", "High"))
+coral$industrial_pollution <- factor(coral$industrial_pollution, 
+                                  levels = c("None", "Low", "Medium", "High"))
+coral$siltation <- factor(coral$siltation, 
+                        levels = c("Never", "Occasionally", "Often", "Always"))
+# trash loaded in as an integer but is actually a categorical variable
+coral$trash_general <- as.factor(coral$trash_general)
+
+# changing the factor names of trash_general
+levels(coral$trash_general) <- c("None", "Low", "Medium", "High")
+
+# creating a new variable that sums all incidences of disease with mutate()
+coral <- coral %>%
+  mutate("disease_count" = black_band + white_band + 
+           white_plague + aspergillosis)
+```
+
+```{r}
+# keeping rows that contain data for bleaching_percent_pop with subset()
+bleached_coral <- coral %>%
+  subset(bleaching_percent_pop!=is.na(bleaching_percent_pop))
+
+# keeping rows that contain data for disease_count
+diseased_coral <- coral %>%
+  subset(disease_count!=is.na(disease_count))
+```
+
+Part 1: Relationships between Pollutants and Coral Bleaching
+
+```{r}
+# first remove rows with no data for sewage_pollution using subset()
+coral_sewage <- bleached_coral %>%
+  subset(sewage_pollution!="")
+
+# performing an ANOVA to compare the mean bleaching percents at 
+# different levels of sewage pollution with aov()
+sewage_anova <- aov(bleaching_percent_pop ~ sewage_pollution, 
+                    data = coral_sewage)
+summary(sewage_anova)
+```
+
+```{r}
+# since the results were significant, performing a Tukey's post hoc test
+# with TukeyHSD()
+TukeyHSD(sewage_anova)
+```
+
+**Analysis of variance revealed a significant difference between levels of sewage pollution and coral bleaching (F(3, 2837) = 3.433, p = 0.016). Therefore, we reject the null hypothesis of no relationship between sewage level and coral bleaching. Using a Tukey's post hoc test, we determined that reefs with medium levels of sewage had significantly greater levels of coral bleaching than reefs with low levels of sewage pollution (p = 0.036). Other pairwise comparisons were not statistically significant.**
+
+```{r}
+# first remove rows with no data for industrial_pollution using subset()
+coral_industrial <- bleached_coral %>%
+  subset(industrial_pollution!="")
+
+# performing an ANOVA to compare the mean bleaching percents at 
+# different levels of industrial pollution
+industrial_anova <- aov(bleaching_percent_pop ~ industrial_pollution, 
+                        data = coral_industrial)
+summary(industrial_anova)
+```
+
+```{r}
+# since the results were significant, performing a Tukey's post hoc test
+# with TukeyHSD()
+TukeyHSD(industrial_anova)
+```
+
+**Analysis of variance revealed a statistically significant difference in coral bleaching at different levels of industrial pollution (F(3, 2840) = 4.129, p = 0.0062). This allowed us to reject our null hypothesis of no difference in coral bleaching at different industrial pollution levels. Using a Tukey's post-hoc test, we determined that coral reefs with medium levels of industrial pollution exhibited significantly higher levels of coral bleaching than reefs with none (p = 0.046). Other pairwise comparisons were not significant.**
+
+```{r}
+# first remove rows with no data for siltation using subset()
+coral_silt <- bleached_coral %>%
+  subset(siltation!="")
+
+# performing an ANOVA to compare the mean bleaching percents at 
+# different levels of siltation
+silt_anova <- aov(bleaching_percent_pop ~ siltation, data = coral_silt)
+summary(silt_anova)
+```
+
+```{r}
+# since the results were significant, performing a Tukey's post hoc test
+# with TukeyHSD()
+TukeyHSD(silt_anova)
+```
+
+**Analysis of variance revealed a statistically significant difference in coral bleaching at different levels of siltation in the Caribbean (F(3, 2856) = 7.337, p < 0.0011). Using a Tukey's post-hoc test, we observed that reefs that always had siltation had significantly greater coral bleaching than reefs that never experienced siltation (p = 0.021), reefs that occasionally experienced siltation (p < 0.001), and reefs that often experienced siltation (p = 0.047). There were no statistically significant differences in coral bleaching between other levels of siltation.**
+
+```{r}
+# first remove rows with no data for trash_general using subset()
+coral_trash <- bleached_coral %>%
+  subset(trash_general!="")
+```
+
+```{r}
+# now run an ANOVA on the relationship between trash level and coral bleaching
+trash_anova_bleach <- aov(bleaching_percent_pop ~ trash_general, 
+                          data = coral_trash)
+summary(trash_anova_bleach)
+```
+
+**Analysis of variance revealed no statistically significant difference in coral bleaching between varying levels of trash (F(3, 3065) = 1.578, p = 0.193). Therefore we fail to reject the null hypothesis of no relationship between trash and bleaching.**
+
+Part 1.1: Visualizing Pollution Impacts on Coral Bleaching
+
+```{r}
+# defining pairwise relationships with list() that previous analysis 
+# showed to be significant
+sewage_pairs_sig <- list(c("Medium", "Low"))
+industrial_pairs_sig <- list(c("None", "Medium"))
+silt_pairs_sig <- list(c("Always", "Never"), c("Always", "Occasionally"), 
+                       c("Always", "Often"))
+```
+
+```{r}
+# plot for sewage pollution & bleaching using ggbarplot()
+# and adding asterisks for statistical significance with stat_compare_means()
+sewage_plot_1 <- ggbarplot(coral_sewage,
+          x = "sewage_pollution",
+          y = "bleaching_percent_pop",
+          color = "black",
+          fill = "aquamarine",
+          add = "mean_se", 
+          ylim = c(0,30)) + 
+  labs(x = "Sewage", y = "Bleaching Percent") +
+  rotate_x_text(angle = 33) +
+  stat_compare_means(comparisons = sewage_pairs_sig,
+                     method = "t.test",
+                     p.adjust.methods = "tukey_hsd",
+                     label = "p.signif",
+                     label.y = c(20),
+                     tip.length = 0.01) +
+  theme(text = element_text(size = 10))
+
+# plot for industrial pollution & bleaching
+industrial_plot_1 <- ggbarplot(coral_industrial,
+          x = "industrial_pollution", 
+          y = "bleaching_percent_pop",
+          color = "black",
+          fill = "cornflowerblue",
+          add = "mean_se", 
+          ylim = c(0,30)) +
+  labs(x = "Industrial Pollution", y = "") +
+  rotate_x_text(angle = 33) +
+  stat_compare_means(comparisons = industrial_pairs_sig,
+                     method = "t.test",
+                     p.adjust.methods = "tukey_hsd",
+                     label = "p.signif",
+                     label.y = c(20),
+                     tip.length = 0.01) +
+  theme(text = element_text(size = 10))
+
+# plot for siltation & bleaching
+siltation_plot_1 <- ggbarplot(coral_silt,
+          x = "siltation", 
+          y = "bleaching_percent_pop",
+          color = "black",
+          fill = "darkslategray",
+          add = "mean_se", 
+          ylim = c(0,30)) +
+  labs(x = "Siltation", y = "") +
+  rotate_x_text(angle = 33) +
+  stat_compare_means(comparisons = silt_pairs_sig,
+                     method = "t.test",
+                     p.adjust.methods = "tukey_hsd",
+                     label = "p.signif",
+                     label.y = c(25, 22, 19),
+                     tip.length = 0.01) +
+  theme(text = element_text(size = 10))
+
+# plot for trash & bleaching
+trash_plot_1 <- ggbarplot(coral_trash,
+          x = "trash_general",
+          y = "bleaching_percent_pop",
+          color = "black",
+          fill = "deepskyblue4",
+          add = "mean_se",
+          ylim = c(0, 30)) +
+  labs(x = "Trash", y = "") +
+  rotate_x_text(angle=33) +
+  theme(text = element_text(size = 10))
+  # no need for stat_compare_means since not significant
+```
+
+```{r}
+# arranging these plots on panels next to each other with ggarrange()
+# this plot will go into my Science report (Figure 2)
+ggarrange(sewage_plot_1, industrial_plot_1, trash_plot_1, siltation_plot_1, 
+          ncol = 4, nrow = 1,
+          labels = c("A", "B", "C", "D"))
+```
+
+**Figure 2: Average Coral Bleaching by Pollution Level.** Analysis of variance showed a statistically significant difference in coral bleaching by level of sewage pollution (F(3, 2837) = 3.43, p = 0.016), industrial pollution (F(3, 2840) = 4.13, p = 0.0062), and siltation (F(3, 2856) = 7.34, p < 0.001). There was no statistically significant difference in coral bleaching by varying levels of trash (F(3, 3065) = 1.578, p = 0.193). Tukey’s post hoc tests revealed that coral reefs with medium sewage pollution had significantly more coral bleaching than reefs with low sewage pollution (p = 0.036). Additionally, reefs with medium industrial pollution had significantly more coral bleaching than reefs with none (p = 0.046). Finally, coral reefs that always experienced siltation had significantly greater bleaching than reefs that experienced siltation often (p = 0.047), occasionally (p < 0.001), or never (p = 0.021). Error bars indicate standard error.  * indicates statistical significance at p < 0.05 and ** at p < 0.01.
+
+```{r}
+# pared down version of this graph for the graphical abstract
+ggarrange(sewage_plot_1, siltation_plot_1, ncol = 2, nrow = 1,
+          labels = c("A", "B"))
+```
+
+Part 1.2: Impact of pollution on coral disease incidence
+
+```{r}
+# first remove rows with no data for sewage_pollution using subset()
+coral_sewage_2 <- diseased_coral %>%
+  subset(sewage_pollution!="")
+
+# perform an ANOVA to compare mean disease incidence 
+# at different levels of sewage pollution
+sewage_anova_2 <- aov(disease_count ~ sewage_pollution, data = coral_sewage_2)
+summary(sewage_anova_2)
+```
+
+```{r}
+# now run a Tukey's post-hoc test since the p-value was significant
+TukeyHSD(sewage_anova_2)
+```
+
+**Analysis of variance revealed a significant difference between levels of sewage pollution and coral disease incidence (F(3, 781) = 4.642, p = 0.0032). Therefore, we reject the null hypothesis of no relationship between sewage level and coral disease. A Tukey's post hoc test showed that medium levels of sewage pollution had significantly greater disease incidence than reefs with no sewage pollution (p = 0.0085). Similarly, reefs with high levels of sewage pollution had significantly greater disease incidence than reefs with none (p = 0.0437). Other pairwise comparisons were not statistically significant.**
+
+```{r}
+# first remove rows with no data for industrial_pollution using subset()
+coral_industrial_2 <- diseased_coral %>%
+  subset(industrial_pollution!="")
+```
+
+```{r}
+# after noticing the small sample size in the high category:
+# perform a Shapiro-Wilk's test to assess normality with shapiro.test()
+shapiro.test(diseased_coral$disease_count[diseased_coral$industrial_pollution==
+                                            "High"])
+```
+**The Shapiro-Wilk's test was statistically significant, meaning that the distribution of industrial_pollution values is significantly different from normal (W = 0.74, p = 0.0005). I also examined a histogram of disease_count values in places where industrial_pollution was high, and the distribution did not appear normal at all. Therefore, we must use non-parametric methods when working with small sample sizes. This means that the Kruskal-Wallis test will replace the one-way ANOVA, and the pairwise Wilcoxon test will replace the Tukey's post-hoc test, with the Benjamini-Hochberg method for p-value adjustment.**
+
+```{r}
+# use a Kruskal-Wallis test to replace the ANOVA
+kruskal.test(disease_count ~ industrial_pollution, data = coral_industrial_2)
+```
+**A Kruskal-Wallis rank sum test did not indicate a statistically significant difference in median disease incidence by level of industrial pollution (H(3) = 6.29, p = 0.098). Therefore, we do not reject the null hypothesis of no difference in the median level of disease between the four levels of industrial pollution.**
+
+```{r}
+# first remove rows with no data for siltation using subset()
+coral_silt_2 <- diseased_coral %>%
+  subset(siltation!="")
+
+# perform an ANOVA to compare mean disease incidence
+# at different levels of siltation
+silt_anova_2 <- aov(disease_count ~ siltation, data = coral_silt_2)
+summary(silt_anova_2)
+```
+
+```{r}
+# Tukey's test since the ANOVA was significant
+TukeyHSD(silt_anova_2)
+```
+
+**Analysis of variance revealed a statistically significant difference in coral disease incidence at varying levels of siltation (F(3, 802) = 19.96, p < 0.0001).Tukey's post hoc testing showed that reefs that always experience siltation have significantly higher rates of coral disease than reefs that often have siltation (p = 0.0057), occasionally have siltation (p < 0.0001), and never have siltation (p < 0.0001). Similarly, reefs that often have siltation also have significantly higher levels of coral disease than reefs that never experience siltation (p = 0.0016).**
+
+```{r}
+# first remove rows with no data for trash_general using subset()
+coral_trash_2 <- diseased_coral %>%
+  subset(trash_general!="")
+```
+
+```{r}
+# now run an ANOVA on the relationship between trash level and disease incidence
+trash_anova_disease <- aov(disease_count ~ trash_general, data = coral_trash_2)
+summary(trash_anova_disease)
+```
+
+```{r}
+# since it was statistically significant, we will run a Tukey's post-hoc test
+TukeyHSD(trash_anova_disease)
+```
+
+**Analysis of variance revealed a significant relationship between trash level and disease incidence (F(3, 944) = 2.897, p = 0.0342). However, a Tukey's post hoc test returned no statistically significant pairwise relationships, likely because Tukey's tests adjust the p-value threshold to avoid inflating Type 1 error. However, coral disease with low levels of trash was notably higher than with no trash and appeared to be trending towards significance (p = 0.064). This likely accounts for the ANOVA being statistically significant.**
+
+```{r}
+# listing significant pairwise relationships for pollution & disease incidence
+sewage_pairs_sig_2 <- list(c("Medium", "None"), c("High", "None"))
+# no significant pairs for industrial pollution & coral disease or trash
+silt_pairs_sig_2 <- list(c("Always", "Never"), c("Always", "Occasionally"), 
+                         c("Always", "Often"), c("Often", "Never"))
+```
+
+```{r}
+# plot for sewage pollution & disease incidence using ggbarplot()
+# and stat_compare_means() to add symbols for significance
+sewage_plot_2 <- ggbarplot(coral_sewage_2,
+          x = "sewage_pollution",
+          y = "disease_count",
+          color = "black",
+          fill = "aquamarine",
+          add = "mean_se", 
+          ylim = c(0,50)) + 
+  labs(x = "Sewage", y = "Disease Incidence") +
+  rotate_x_text(angle = 33) +
+  stat_compare_means(comparisons = sewage_pairs_sig_2,
+                     method = "t.test",
+                     p.adjust.methods = "tukey_hsd",
+                     label = "p.signif",
+                     label.y = c(30, 34),
+                     tip.length = 0.01) +
+  theme(text = element_text(size = 10))
+
+# plot for industrial pollution & disease
+industrial_plot_2 <- ggbarplot(coral_industrial_2,
+          x = "industrial_pollution", 
+          y = "disease_count",
+          color = "black",
+          fill = "cornflowerblue",
+          add = "mean_se", 
+          ylim = c(0,50)) +
+  labs(x = "Industrial Pollution", y = "") +
+  rotate_x_text(angle = 33) +
+  theme(text = element_text(size = 10))
+  # no need for stat_compare_means since not significant
+
+# plot for siltation & disease
+siltation_plot_2 <- ggbarplot(coral_silt_2,
+          x = "siltation", 
+          y = "disease_count",
+          color = "black",
+          fill = "darkslategray",
+          add = "mean_se", 
+          ylim = c(0,50)) +
+  labs(x = "Siltation", y = "") +
+  rotate_x_text(angle = 33) +
+  stat_compare_means(comparisons = silt_pairs_sig_2,
+                     method = "t.test",
+                     p.adjust.methods = "tukey_hsd",
+                     label = "p.signif",
+                     label.y = c(44, 41, 38),
+                     tip.length = 0.01) +
+  theme(text = element_text(size = 10))
+
+# plot for trash & disease
+trash_plot_2 <- ggbarplot(coral_trash_2,
+          x = "trash_general",
+          y = "disease_count",
+          color = "black",
+          fill = "deepskyblue4",
+          add = "mean_se",
+          ylim = c(0, 30)) +
+  labs(x = "Trash", y = "") +
+  rotate_x_text(angle=33) +
+  theme(text = element_text(size = 10))
+  # no need for stat_compare_means since not significant
+```
+
+```{r}
+# put all plots together on different panels with ggarrange() for Science report
+# (Figure 3)
+ggarrange(sewage_plot_2, industrial_plot_2, trash_plot_2, siltation_plot_2, 
+          ncol = 4, nrow = 1,
+          labels = c("A", "B", "C", "D"))
+```
+
+**Figure 3: Average Coral Disease Incidence by Pollution Level.** Analysis of variance revealed a statistically significant difference in coral disease incidence according to level of sewage pollution (F(3, 781) = 4.64, p = 0.0032), trash (F(3, 944) = 2.897, p = 0.034), and siltation (F(3, 802) = 19.96, p < 0.0001). Industrial pollution, measured with a Kruskal-Wallis chi-squared test, was not statistically significant (H(3) = 6.29, p = 0.098).Tukey’s post hoc tests showed that reefs with no sewage pollution had significantly less disease incidence than reefs with medium sewage (p = 0.0085) and high sewage (p = 0.044). Reefs that always experienced siltation had significantly higher levels of disease incidence than reefs that often had siltation (p = 0.0057), occasionally (p < 0.0001), and never (p < 0.0001). However, post hoc testing returned no statistically significant pairwise relationships for trash and coral disease rates, likely due to the adjusted p-value thresholds. However, reefs with low levels of trash had greater disease incidence than reefs with none, and this appeared to be the relationship trending towards significance (p = 0.064). Error bars indicate standard error. * indicates statistical significance at p < 0.05 , ** at p < 0.01, and *** at p < 0.001.
+
+```{r}
+# pared down version of graph for graphical abstract
+ggarrange(sewage_plot_2, siltation_plot_2, ncol = 2, nrow = 1,
+          labels = c("A", "B"))
+```
+
+Part 2: Impact of Distance to Nearest Population on Coral Bleaching & Disease
+
+```{r}
+# bleaching & distance
+# first remove rows with no data for distance_to_nearest_popn_km using subset()
+coral_distance_bleached <- bleached_coral %>%
+  subset(distance_to_nearest_popn_km!="")
+
+# create a linear model for distance and bleaching using lm()
+lm_distance_bleached <- lm(bleaching_percent_pop ~ distance_to_nearest_popn_km, 
+                           data = coral_distance_bleached)
+summary(lm_distance_bleached)
+
+# correlation coefficient for distance and bleaching using cor()
+cor(coral_distance_bleached$bleaching_percent_pop, 
+    coral_distance_bleached$distance_to_nearest_popn_km, method="pearson")
+```
+
+```{r}
+# disease & distance
+# now remove rows with no data for distance_to_nearest_popn_km using subset()
+coral_distance_disease <- diseased_coral %>%
+  subset(distance_to_nearest_popn_km!="")
+
+# create a linear model for distance and disease using lm()
+lm_distance_disease <- lm(disease_count ~ distance_to_nearest_popn_km, 
+                          data = coral_distance_disease)
+summary(lm_distance_disease)
+
+# correlation coefficient for distance and disease using cor()
+cor(coral_distance_disease$disease_count, 
+    coral_distance_disease$distance_to_nearest_popn_km, method="pearson")
+```
+
+**Linear regression revealed no statistically significant relationship between distance to the nearest population and either coral bleaching (t(1001) = 0.628, p = 0.53) or disease incidence (t(907) = -0.114, p = 0.909).  As a result, we do not reject the null hypothesis of no relationship between distance to the nearest population center and coral bleaching or disease incidence. Similarly, the correlation coefficients for both relationships were very close to zero. In particular, the correlation coefficient between distance and bleaching was 0.0068, while the correlation coefficient between distance and disease incidence was -0.0038.**
+
+```{r}
+# visualizing the relationship between distance and bleaching with ggplot()
+# and set alpha to visualize density at each points
+distance_bleaching_plot <- ggplot(coral_distance_bleached) +
+        geom_point(aes(x=distance_to_nearest_popn_km, y=bleaching_percent_pop),
+             shape = 16, color = "cadetblue", alpha = 0.6) + 
+        xlim(0, 100) + 
+        labs(x = "Distance to Population (km)",
+             y = "Bleaching Percent") + 
+        theme_cowplot()
+
+distance_disease_plot <- ggplot(coral_distance_disease) +
+        geom_point(aes(x=distance_to_nearest_popn_km, y=disease_count),
+             shape = 16, color = "steelblue", alpha = 0.6) + 
+        xlim(0, 100) + 
+        labs(x = "Distance to Population (km)",
+             y = "Disease Incidence") +
+        theme_cowplot()
+
+ggarrange(distance_bleaching_plot, distance_disease_plot, ncol=2, nrow=1,
+          labels = c("A", "B"))
+
+```
+
+**Figure 4: Coral Health and Distance to Nearest Population.** Linear regression revealed no statistically significant relationship between distance to population and either coral bleaching (t(2848) = 0.363, p = 0.717) or disease incidence (t(907) = –0.114, p = 0.909). Darker dots indicate more data at those points. 
+
