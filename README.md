@@ -10,6 +10,8 @@
 
 **View formatted analysis:** [https://htmlpreview.github.io/ama7738/coral-reef-pollution-analysis-caribbean/blob/main/Coral_Reef_Analysis.html](https://htmlpreview.github.io/?https://github.com/ama7738/coral-reef-pollution-analysis-caribbean/blob/main/Coral_Reef_Analysis.html)
 
+<img width="712" height="674" alt="image" src="https://github.com/user-attachments/assets/43df01f9-b53f-4a3d-8982-5ef074c15eda" />
+
 **Methods:** 
 - ANOVA and Tukey HSD post-hoc testing to compare mean bleaching and disease levels across pollution categories
 - Shapiro-Wilk normality testing to check ANOVA assumptions. Where ANOVA was not applicable due to small sample size, Kruskal-Wallis rank sum tests and pairwise Wilcoxon tests were used in place of ANOVA and Tukey
