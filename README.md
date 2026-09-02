@@ -8,7 +8,7 @@
 
 **Acknowledgement:** Thank you to the Reef Check Foundation, its chapters, and its volunteers, who have spent countless hours collecting this data. This project would not have been possible without their contribution. 
 
-**View formatted analysis:** https://htmlpreview.github.io/ama7738/coral-reef-pollution-analysis-caribbean/blob/main/Coral_Reef_Analysis.html
+**View formatted analysis:** [https://htmlpreview.github.io/ama7738/coral-reef-pollution-analysis-caribbean/blob/main/Coral_Reef_Analysis.html](https://htmlpreview.github.io/?https://github.com/ama7738/coral-reef-pollution-analysis-caribbean/blob/main/Coral_Reef_Analysis.html)
 
 **Methods:** 
 - ANOVA and Tukey HSD post-hoc testing to compare mean bleaching and disease levels across pollution categories
